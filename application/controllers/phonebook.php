@@ -10,6 +10,46 @@ class Phonebook extends CI_Controller {
 		$this->load->view('listing', $data);
 	}
 
+	public function create() {
+		$this->load->library('form_validation');
+		$this->form_validation->set_error_delimiters('', '');
+		$this->form_validation->set_rules('contact_name', 'Contact Name', 'required|callback_valid_name');
+		$this->form_validation->set_rules('contact_number', 'Contact Phone', 'required|callback_valid_phone');
+		$this->form_validation->set_rules('contact_email', 'Contact Email', 'required|valid_email');
+
+		$fields = array('contact_id', 'contact_name', 'contact_number', 'contact_email');
+
+		if ($this->form_validation->run() == FALSE) {
+			$response = array('result'=>'error');
+			foreach ($fields as $field) {
+				if(form_error($field) != '') {
+					$response['message'] = form_error($field);
+					break;
+				}
+			}
+			echo json_encode($response);
+			return false;//early return
+		}
+
+		
+		$this->load->model('phonebook_model');
+		$data = array();
+		
+		$data['full_name'] = $this->input->post('contact_name', true);
+		$data['phone_number'] = $this->input->post('contact_number', true);
+		$data['email'] = $this->input->post('contact_email', true);
+
+		$result = $this->phonebook_model->create($data);
+
+		if($result == true) {
+			$response = array('result' => 'success', 'message' => 'Contact created successfully - Refreshing Page'); 
+		} else {
+			$response = array('result' => 'error', 'message' => 'Some error occured, please try after some time'); 
+		}
+		echo json_encode($response);
+		return true;
+	}
+
 	public function update() {
 
 		$this->load->library('form_validation');
@@ -62,7 +102,7 @@ class Phonebook extends CI_Controller {
 		if($contactId != 0) {
 			$result = $this->phonebook_model->delete($contactId);
 			if($result == true) {
-				$response = array('result' => 'success', 'message' => 'Contacted deleted successfully'); 
+				$response = array('result' => 'success', 'message' => 'Contact deleted successfully'); 
 			} else {
 				$response = array('result' => 'error', 'message' => 'Some error occured, please try after some time'); 
 			}
@@ -92,6 +132,44 @@ class Phonebook extends CI_Controller {
 		}
 	}
 
+	public function import() {
+
+		$config['upload_path']   = $this->config->item('base_path').'contact_csvs/';
+		$config['allowed_types'] = 'text/plain|text/csv|csv';
+		$config['file_name']     = 'upload_phonebook_csv_'.md5(time()).'.csv';
+
+		$this->load->library('upload', $config);
+
+		if ( ! $this->upload->do_upload('contacts')) {
+			$data = array('error' => $this->upload->display_errors());
+			$this->load->view('upload_error', $data);
+			return false;
+		} else {
+			$delimeter = $this->input->post('delimeter', true);
+
+			if($delimeter == 'tab') {
+				$delimeterVal = '	';
+			} else {
+				$delimeterVal = ',';
+			}
+
+			$data = $this->upload->data();
+ 			$uploadedFilePath = $data['full_path'];
+			$response = $this->getCsvContent($uploadedFilePath, $delimeterVal);
+
+			if($response['result'] == 'error') {
+				$data = array('error' => $response['message']);
+				$this->load->view('upload_error', $data);
+				return false;
+			}
+		}
+
+		$this->load->model('phonebook_model');
+		$response = $this->phonebook_model->sync_contacts($response['contacts']);
+		
+	}
+
+
 	public function export() {
 		$this->load->model('phonebook_model');
 		$this->load->helper('download');
@@ -103,6 +181,33 @@ class Phonebook extends CI_Controller {
 		$fileName = 'phonebook_dump_'.date('Y_m_d', time()).'.csv';
 		$phonebook = $this->phonebook_model->export();
 		force_download($fileName, $phonebook);
+	}
+
+	public function getCsvContent($filepath, $separator = ',', $enclosure = '"') {
+        $maxRowSize  = 4096;
+        $content     = array();
+        $tableFields = array('full_name', 'phone_number', 'email');
+
+        $file      = fopen($filepath, 'r');
+        $csvFields = fgetcsv($file, $maxRowSize, $separator, $enclosure);
+        $fieldDiff = array_diff($csvFields, $tableFields);
+        
+        if(count($fieldDiff) > 0) {
+        	$response = array('result'=>'error', 'message' => 'Invalid fields in CSV, should only have: full_name, phone_number, email');
+        	return $response;
+        }
+        $i = 0;
+        while( ($row = fgetcsv($file, $maxRowSize, $separator, $enclosure)) != false ) {            
+            if( count($row) == count($tableFields)) { // skip invalid lines
+                foreach ($csvFields as $index => $value) {
+                	$content[$i][$value] = $row[$index]; 
+                }
+                $i++;
+            }
+        }
+        fclose($file);
+        $response = array('result'=>'success', 'contacts' => &$content);
+        return $response;
 	}
 
 }

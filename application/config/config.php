@@ -14,7 +14,8 @@
 | path to your installation.
 |
 */
-$config['base_url']	= 'http://localhost/phonebook/';
+$config['base_url']	 = 'http://localhost/phonebook/';
+$config['base_path'] = '/var/www/phonebook/'; //useful for example in upload file
 
 /*
 |--------------------------------------------------------------------------
