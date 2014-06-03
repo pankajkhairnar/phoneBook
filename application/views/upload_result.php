@@ -2,19 +2,6 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <script src="<?php echo $this->config->item('base_url').'assets/js/jquery-1.11.1.min.js'; ?>"></script>
-    <script src="<?php echo $this->config->item('base_url').'assets/js/bootstrap.min.js'; ?>"></script>
-    <script src="<?php echo $this->config->item('base_url').'assets/js/bootbar.js'; ?>"></script>
-    <!--script src="<?php //echo $this->config->item('base_url').'assets/js/modal.js'; ?>"></script-->
-    <link href="<?php echo $this->config->item('base_url'); ?>assets/css/bootstrap.css" rel="stylesheet">
-    <link href="<?php echo $this->config->item('base_url'); ?>assets/css/bootbar.css" rel="stylesheet">
-   <script type="text/javascript">
-   var siteUrl = "<?php echo $this->config->site_url(); ?>";
-   </script>
-    <script type="text/javascript">
-    jQuery(document).ready(function(){
-    });
-    </script>
   </head>
 
   <body>
