@@ -35,16 +35,16 @@ class Phonebook extends CI_Controller {
 		$this->load->model('phonebook_model');
 		$data = array();
 		
-		$data['full_name'] = $this->input->post('contact_name', true);
+		$data['full_name']    = $this->input->post('contact_name', true);
 		$data['phone_number'] = $this->input->post('contact_number', true);
-		$data['email'] = $this->input->post('contact_email', true);
+		$data['email']        = $this->input->post('contact_email', true);
 
 		$result = $this->phonebook_model->create($data);
 
 		if($result == true) {
 			$response = array('result' => 'success', 'message' => 'Contact created successfully - Refreshing Page'); 
 		} else {
-			$response = array('result' => 'error', 'message' => 'Some error occured, please try after some time'); 
+			$response = array('result' => 'error', 'message' => 'Some error occurred, please try after some time'); 
 		}
 		echo json_encode($response);
 		return true;
@@ -76,17 +76,17 @@ class Phonebook extends CI_Controller {
 		$this->load->model('phonebook_model');
 		$data = array();
 		
-		$contactId = $this->input->post('contact_id', true);//second argument for xss cleaning
-		$data['full_name'] = $this->input->post('contact_name', true);
+		$contactId            = $this->input->post('contact_id', true);//second argument for xss cleaning
+		$data['email']        = $this->input->post('contact_email', true);
+		$data['full_name']    = $this->input->post('contact_name', true);
 		$data['phone_number'] = $this->input->post('contact_number', true);
-		$data['email'] = $this->input->post('contact_email', true);
 
 		$result = $this->phonebook_model->update($data, $contactId);
 
 		if($result == true) {
 			$response = array('result' => 'success', 'message' => 'Contact info updated successfully'); 
 		} else {
-			$response = array('result' => 'error', 'message' => 'Some error occured, please try after some time'); 
+			$response = array('result' => 'error', 'message' => 'Some error occurred, please try after some time'); 
 		}
 		$response['contact_id'] = $contactId;
 		echo json_encode($response);
@@ -104,7 +104,7 @@ class Phonebook extends CI_Controller {
 			if($result == true) {
 				$response = array('result' => 'success', 'message' => 'Contact deleted successfully'); 
 			} else {
-				$response = array('result' => 'error', 'message' => 'Some error occured, please try after some time'); 
+				$response = array('result' => 'error', 'message' => 'Some error occurred, please try after some time'); 
 			}
 		} else {
 			$response = array('result' => 'error', 'message' => 'Invalid contact Id'); 
@@ -113,6 +113,7 @@ class Phonebook extends CI_Controller {
 		echo json_encode($response);
 	}
 
+	//callback function for checking valid phone : used in form validation
 	public function valid_phone($phoneNumber) {
 		if(preg_match('/^[\(\)+\-0-9]{7,15}$/', $phoneNumber)) {
 			return true;
@@ -122,6 +123,7 @@ class Phonebook extends CI_Controller {
 		}
 	}
 
+	//callback function for checking valid name : used in form validation
 	public function valid_name($name) {
 
 		if(preg_match('/^[0-9a-zA-Z-_ ]{1,50}$/', $name)) {
@@ -141,11 +143,11 @@ class Phonebook extends CI_Controller {
 		$this->load->library('upload', $config);
 
 		if ( ! $this->upload->do_upload('contacts')) {
-			$data = array('error' => $this->upload->display_errors());
-			$this->load->view('upload_error', $data);
+			$data = array('result'=>'error', 'message' => $this->upload->display_errors());
+			$this->load->view('upload_result', $data);
 			return false;
 		} else {
-			$delimeter = $this->input->post('delimeter', true);
+			$delimeter = $this->input->post('delimiter', true);
 
 			if($delimeter == 'tab') {
 				$delimeterVal = '	';
@@ -153,20 +155,20 @@ class Phonebook extends CI_Controller {
 				$delimeterVal = ',';
 			}
 
-			$data = $this->upload->data();
+			$data             = $this->upload->data();
  			$uploadedFilePath = $data['full_path'];
 			$response = $this->getCsvContent($uploadedFilePath, $delimeterVal);
 
 			if($response['result'] == 'error') {
-				$data = array('error' => $response['message']);
-				$this->load->view('upload_error', $data);
+				$data = array('result'=>'error', 'message' => $response['message']);
+				$this->load->view('upload_result', $data);
 				return false;
 			}
 		}
 
 		$this->load->model('phonebook_model');
 		$response = $this->phonebook_model->sync_contacts($response['contacts']);
-		
+		$this->load->view('upload_result', $response);
 	}
 
 
@@ -196,28 +198,69 @@ class Phonebook extends CI_Controller {
         	$response = array('result'=>'error', 'message' => 'Invalid fields in CSV, should only have: full_name, phone_number, email');
         	return $response;
         }
+
         $i = 0;
-        while( ($row = fgetcsv($file, $maxRowSize, $separator, $enclosure)) != false ) {            
+        while( ($row = fgetcsv($file, $maxRowSize, $separator, $enclosure)) != false ) {
             if( count($row) == count($tableFields)) { // skip invalid lines
-                foreach ($csvFields as $index => $value) {
-                	$content[$i][$value] = $row[$index]; 
-                }
-                $i++;
+            	//validation for csv data, full name, phone, email
+
+            	if($this->isValidFullName($row[0]) && $this->isValidPhoneNumber($row[1]) && $this->isValidEmail($row[2])) {
+	                foreach ($csvFields as $index => $value) {
+	                	$content[$i][$value] = $row[$index];
+	                }
+	                $i++;
+            	} else {
+            		return array('result'=>'error', 'message' => 'Invalid data in CSV, :'.implode('--', $row));
+            	}
+
             }
         }
+
         fclose($file);
         $response = array('result'=>'success', 'contacts' => &$content);
         return $response;
 	}
 
+
+	private function isValidFullName($name) {
+		if(preg_match('/^[0-9a-zA-Z-_ ]{1,50}$/', $name)) {
+			return true;
+		}
+		
+		return false;
+		
+	}
+
+	private function isValidPhoneNumber($phoneNumber) {
+		if(preg_match('/^[\(\)+\-0-9]{7,15}$/', $phoneNumber)) {
+			return true;
+		}
+		
+		return false;
+	}
+
+	private function isValidEmail($email) {
+		if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+		    return true;
+		}
+
+		return false;
+	}
+
+
+
+
+	// public function generateRecords() {
+		//Code for generating random phonebook entries
+		// for($i = 1; $i<=100; $i++ ){
+		// 			$data = array();
+		// 			$data['phone_number'] = '+1-'.rand(6666,9999).rand(100,999).rand(100,999); 
+		// 			$data['full_name']    = 'Contact '.$i;
+		// 			$data['email']        = 'contact_'.$i.'@yopmail.com';
+		// 			$this->db->insert('phonebook', $data);
+		// }
+	// }
+
 }
 
-
-// for($i = 1; $i<=100; $i++ ){
-// 			$data = array();
-// 			$data['phone_number'] = '+1-'.rand(6666,9999).rand(100,999).rand(100,999); 
-// 			$data['full_name']    = 'Contact '.$i;
-// 			$data['email']        = 'contact_'.$i.'@yopmail.com';
-// 			$this->db->insert('phonebook', $data);
-// }
 ?>

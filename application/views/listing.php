@@ -222,8 +222,8 @@
 				      	  <div class="form-group">
 						    <label for="newContactEmail" class="col-sm-4 control-label">Value Delimiter</label>
 						    <div class="col-sm-8">
-						      <span><input type="radio" name="delimeter" value="tab" checked="checked">Tab</span>
-						      <span><input type="radio" name="delimeter" value="comma">Comma</span>
+						      <span><input type="radio" name="delimiter" value="tab" checked="checked">Tab</span>
+						      <span><input type="radio" name="delimiter" value="comma">Comma</span>
 						    </div>
 						  </div>
 

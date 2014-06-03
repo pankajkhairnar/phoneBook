@@ -45,7 +45,7 @@ class phonebook_model extends CI_Model {
         if(count($contacts) <= 0) {
             return array('result' => 'success', 'message' => 'No contacts to update in file');
         }
-        $fields = array('phone_number', 'full_name', 'email');
+        $fields      = array('phone_number', 'full_name', 'email');
         $contactObjs = $this->db->select($fields)->get($this->table);
 
 
@@ -53,16 +53,11 @@ class phonebook_model extends CI_Model {
            $dbContacts[$contact->phone_number] = $contact;
         }
 
-        echo '<pre>Db contacts';
-        print_r($dbContacts);
-        echo '<br><br><br>';
-        echo '<pre>uploaded contact';
-        print_r($contacts);
         $keepContacts = array();
-        $response = array('update_count' => 0, 'new_count' => 0, 'delete_count'=>0, 'not_changed'=>0);
+        $response     = array('update_count' => 0, 'new_count' => 0, 'delete_count'=>0, 'not_changed'=>0);
 
         foreach ($contacts as $key => $contact) {
-            $data = array('full_name' => $contact['full_name'], 'email' => $contact['email']);      
+            $data        = array('full_name' => $contact['full_name'], 'email' => $contact['email']);      
             $phoneNumber = $contact['phone_number'];
 
             if(isset($dbContacts[$phoneNumber])) {//is number present in db
@@ -80,8 +75,8 @@ class phonebook_model extends CI_Model {
             } else { //create new record
                 $data['phone_number'] = $phoneNumber;
                 $keepContacts[]       = $phoneNumber;
-                $this->db->insert($this->table, $data);
                 $response['new_count']++;
+                $this->db->insert($this->table, $data);
             }
 
         }
@@ -89,6 +84,7 @@ class phonebook_model extends CI_Model {
             $this->db->where_not_in('phone_number', $keepContacts)->delete($this->table);
             $response['delete_count'] = $this->db->affected_rows();
         }
+        $response['result'] = 'success';
         return $response;
     }
 
